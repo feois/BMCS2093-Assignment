@@ -1,0 +1,55 @@
+#!/bin/bash
+
+STATE="menu"
+MENU_INVALID_SELECTION=false
+
+while true
+do
+    clear
+    case $STATE in
+        "menu")
+            cat <<- EOF
+			Equipment Maintenance Menu
+
+			A – Add New Computer Lab Equipment Details
+			S – Search Equipment by Serial Number
+			U – Update an Equipment Details
+			D – Delete an Equipment Details
+			M – Sort Equipment by Model
+			T – Sort equipment by Status
+			P – Sort equipment by Type
+			Q – Exit from Program
+
+			EOF
+
+            if [ "$MENU_INVALID_SELECTION" = true ]
+            then
+                echo "Invalid choice!"
+            fi
+
+            read -p "Please select a choice: " MENU_SELECTION
+
+            MENU_SELECTION=$(echo "$MENU_SELECTION" | tr '[:lower:]' '[:upper:]')
+
+            case $MENU_SELECTION in
+                "Q")
+                    STATE="exit"
+                    ;;
+
+                *)
+                    STATE=""
+                    ;;
+            esac
+            ;;
+
+        "exit")
+            echo "Exit"
+            break
+            ;;
+
+        *)
+            echo "Invalid state: " $STATE
+            break
+            ;;
+    esac
+done
