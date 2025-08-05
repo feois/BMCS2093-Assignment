@@ -1,7 +1,6 @@
 #!/bin/bash
 
 STATE="menu"
-MENU_INVALID_SELECTION=false
 
 while true
 do
@@ -22,25 +21,207 @@ do
 
 			EOF
 
-            if [ "$MENU_INVALID_SELECTION" = true ]
+            if [ "${MENU_SELECTION+set}" ]
             then
-                MENU_INVALID_SELECTION=false
-                echo "Invalid choice!"
+                case $MENU_SELECTION in
+                    "A")
+                        STATE="add"
+                        ;;
+
+                    "Q")
+                        STATE="exit"
+                        ;;
+
+                    *)
+                        unset MENU_SELECTION
+                        ;;
+                esac
+
+                if [ "${MENU_SELECTION+set}" ]
+                then
+                    unset MENU_SELECTION
+                    continue
+                else
+                    echo "Invalid choice!"
+                fi
             fi
 
             read -n 1 -p "Please select a choice: " MENU_SELECTION
 
             MENU_SELECTION=$(echo "$MENU_SELECTION" | tr '[:lower:]' '[:upper:]')
+            ;;
 
-            case $MENU_SELECTION in
-                "Q")
-                    STATE="exit"
-                    ;;
+        "add")
+            cat <<- EOF
+			Add Equipment Details Form
+			========================
+			EOF
 
-                *)
-                    MENU_INVALID_SELECTION=true
-                    ;;
-            esac
+            if echo "${EQUIPMENT_ID}" | grep -Eq "[0-9]{4}"
+            then
+                echo "Equipment ID: $EQUIPMENT_ID"
+            else
+                if [ "${EQUIPMENT_ID+set}" ]
+                then
+                    if [ -z "$EQUIPMENT_ID" ]
+                    then
+                        echo "Equipment ID cannot be empty!"
+                    else
+                        echo "Invalid equipment ID (e.g. 1234)!"
+                    fi
+                fi
+
+                read -p "Equipment ID: " EQUIPMENT_ID
+
+                continue
+            fi
+
+            if echo "${EQUIPMENT_TYPE}" | grep -Eq ".+"
+            then
+                echo "Type: $EQUIPMENT_TYPE"
+            else
+                if [ "${EQUIPMENT_TYPE+set}" ]
+                then
+                    if [ -z "$EQUIPMENT_TYPE" ]
+                    then
+                        echo "Equipment type cannot be empty!"
+                    else
+                        echo "Invalid equipment type!"
+                    fi
+                fi
+
+                read -p "Type: " EQUIPMENT_TYPE
+
+                continue
+            fi
+
+            if echo "${EQUIPMENT_MODEL}" | grep -Eq ".+"
+            then
+                echo "Model: $EQUIPMENT_MODEL"
+            else
+                if [ "${EQUIPMENT_MODEL+set}" ]
+                then
+                    if [ -z "$EQUIPMENT_MODEL" ]
+                    then
+                        echo "Equipment model cannot be empty!"
+                    else
+                        echo "Invalid equipment model!"
+                    fi
+                fi
+
+                read -p "Model: " EQUIPMENT_MODEL
+
+                continue
+            fi
+
+            if echo "${EQUIPMENT_NUMBER}" | grep -Eq "SN[0-9]{9}"
+            then
+                echo "Serial Number: $EQUIPMENT_NUMBER"
+            else
+                if [ "${EQUIPMENT_NUMBER+set}" ]
+                then
+                    if [ -z "$EQUIPMENT_NUMBER" ]
+                    then
+                        echo "Equipment serial number cannot be empty!"
+                    else
+                        echo "Invalid equipment serial number (e.g. SN123456789)!"
+                    fi
+                fi
+
+                read -p "Serial Number: " EQUIPMENT_NUMBER
+
+                EQUIPMENT_NUMBER=$(echo "$EQUIPMENT_NUMBER" | tr '[:lower:]' '[:upper:]')
+
+                continue
+            fi
+
+            if [ "${EQUIPMENT_STATUS}" = "a" ]
+            then
+                echo "Status: Available"
+            elif [ "${EQUIPMENT_STATUS}" = "u" ]
+            then
+                echo "Status: Unavailable"
+            else
+                if [ "${EQUIPMENT_STATUS+set}" ]
+                then
+                    echo "Invalid status!"
+                fi
+
+                read -n 1 -p "Status (Available / Unavailable): " EQUIPMENT_STATUS
+
+                EQUIPMENT_STATUS=$(echo "$EQUIPMENT_STATUS" | tr '[:upper:]' '[:lower:]')
+
+                continue
+            fi
+
+            if echo "${EQUIPMENT_PURCHASE}" | grep -Eq "[0-9]{2}-[0-9]{2}-[0-9]{4}"
+            then
+                echo "Purchase Date (MM-DD-YYYY): $EQUIPMENT_PURCHASE"
+            else
+                if [ "${EQUIPMENT_PURCHASE+set}" ]
+                then
+                    echo "Invalid date!"
+                fi
+
+                read -p "Purchase Date (MM-DD-YYYY): "
+
+                if [ -z "$EQUIPMENT_PURCHASE" ]
+                then
+                    EQUIPMENT_PURCHASE=$(date "+%m-%d-%Y")
+                fi
+
+                continue
+            fi
+
+            if echo "${EQUIPMENT_WARRANTY}" | grep -Eq "[0-9]{2}-[0-9]{2}-[0-9]{4}"
+            then
+                echo "Warranty Date (MM-DD-YYYY): $EQUIPMENT_WARRANTY"
+            else
+                if [ "${EQUIPMENT_WARRANTY+set}" ]
+                then
+                    if [ -z "$EQUIPMENT_WARRANTY" ]
+                    then
+                        echo "Equipment warranty date cannot be empty!"
+                    else
+                        echo "Invalid date!"
+                    fi
+                fi
+
+                read -p "Warranty Date (MM-DD-YYYY): " EQUIPMENT_WARRANTY
+
+                continue
+            fi
+
+            echo
+            echo "Press (q) to return to Equipment Maintenance Menu."
+            echo
+
+            if [ "${EQUIPMENT_CONTINUE+set}" ]
+            then
+                case $EQUIPMENT_CONTINUE in
+                    "y")
+                        # STATE="add"
+                        ;;
+
+                    "q")
+                        STATE="menu"
+                        ;;
+
+                    *)
+                        unset EQUIPMENT_CONTINUE
+                        ;;
+                esac
+            fi
+
+            if [ "${EQUIPMENT_CONTINUE+set}" ]
+            then
+                unset EQUIPMENT_ID EQUIPMENT_TYPE EQUIPMENT_MODEL EQUIPMENT_NUMBER EQUIPMENT_STATUS EQUIPMENT_PURCHASE EQUIPMENT_WARRANTY EQUIPMENT_CONTINUE
+            else
+                read -n 1 -p "Add another new Equipment details? (y)es or (q)uit: " EQUIPMENT_CONTINUE
+
+                EQUIPMENT_CONTINUE=$(echo "$EQUIPMENT_CONTINUE" | tr '[:upper:]' '[:lower:]')
+            fi
+
             ;;
 
         "exit")
