@@ -14,11 +14,16 @@ read_equipment_id() {
         if [ -z "$EQUIPMENT_ID" ]
         then
             echo "Equipment ID cannot be empty!"
-        elif echo "${EQUIPMENT_ID}" | grep -Eq "[0-9]{4}"
+        elif echo "${EQUIPMENT_ID}" | egrep -q "[0-9]{4}"
         then
-            echo "Equipment ID: $EQUIPMENT_ID"
+            if egrep -q "^$EQUIPMENT_ID:" "$EQUIPMENT_FILE"
+            then
+                echo "Equipment with ID $EQUIPMENT_ID already exists!"
+            else
+                echo "Equipment ID: $EQUIPMENT_ID"
 
-            return 1
+                return 1
+            fi
         else
             echo "Invalid equipment ID (e.g. 1234)!"
         fi
@@ -35,7 +40,7 @@ read_equipment_type() {
         if [ -z "$EQUIPMENT_TYPE" ]
         then
             echo "Equipment type cannot be empty!"
-        elif echo "${EQUIPMENT_TYPE}" | grep -Eq ".+"
+        elif echo "${EQUIPMENT_TYPE}" | egrep -q ".+"
         then
             echo "Type: $EQUIPMENT_TYPE"
 
@@ -56,7 +61,7 @@ read_equipment_model() {
         if [ -z "$EQUIPMENT_MODEL" ]
         then
             echo "Equipment model cannot be empty!"
-        elif echo "${EQUIPMENT_MODEL}" | grep -Eq ".+"
+        elif echo "${EQUIPMENT_MODEL}" | egrep -q ".+"
         then
             echo "Model: $EQUIPMENT_MODEL"
 
@@ -77,7 +82,7 @@ read_equipment_number() {
         if [ -z "$EQUIPMENT_NUMBER" ]
         then
             echo "Equipment serial number cannot be empty!"
-        elif echo "${EQUIPMENT_NUMBER}" | grep -Eq "SN[0-9]{9}"
+        elif echo "${EQUIPMENT_NUMBER}" | egrep -q "SN[0-9]{9}"
         then
             echo "Serial Number: $EQUIPMENT_NUMBER"
 
@@ -130,7 +135,7 @@ read_equipment_status() {
 read_equipment_purchase() {
     if [ "${EQUIPMENT_PURCHASE+set}" ]
     then
-        if echo "${EQUIPMENT_PURCHASE}" | grep -Eq "$DATE_REGEX"
+        if echo "${EQUIPMENT_PURCHASE}" | egrep -q "$DATE_REGEX"
         then
             echo "Purchase Date (MM-DD-YYYY): $EQUIPMENT_PURCHASE"
 
@@ -156,7 +161,7 @@ read_equipment_warranty() {
         if [ -z "$EQUIPMENT_WARRANTY" ]
         then
             echo "Equipment warranty date cannot be empty!"
-        elif echo "${EQUIPMENT_WARRANTY}" | grep -Eq "$DATE_REGEX"
+        elif echo "${EQUIPMENT_WARRANTY}" | egrep -q "$DATE_REGEX"
         then
             echo "Warranty Date (MM-DD-YYYY): $EQUIPMENT_WARRANTY"
 
