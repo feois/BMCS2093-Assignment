@@ -24,10 +24,11 @@ do
 
             if [ "$MENU_INVALID_SELECTION" = true ]
             then
+                MENU_INVALID_SELECTION=false
                 echo "Invalid choice!"
             fi
 
-            read -p "Please select a choice: " MENU_SELECTION
+            read -n 1 -p "Please select a choice: " MENU_SELECTION
 
             MENU_SELECTION=$(echo "$MENU_SELECTION" | tr '[:lower:]' '[:upper:]')
 
@@ -37,7 +38,7 @@ do
                     ;;
 
                 *)
-                    STATE=""
+                    MENU_INVALID_SELECTION=true
                     ;;
             esac
             ;;
