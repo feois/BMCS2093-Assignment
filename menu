@@ -1,173 +1,184 @@
 #!/bin/bash
 
+STATE="menu"
+EQUIPMENT_FILE="Equipment.txt"
+DATE_REGEX="[0-9]{2}-[0-9]{2}-[0-9]{4}"
+
 unset_equipment() {
     unset EQUIPMENT_ID EQUIPMENT_TYPE EQUIPMENT_MODEL EQUIPMENT_NUMBER EQUIPMENT_STATUS EQUIPMENT_PURCHASE EQUIPMENT_WARRANTY
 }
 
 read_equipment_id() {
-    if echo "${EQUIPMENT_ID}" | grep -Eq "[0-9]{4}"
+    if [ "${EQUIPMENT_ID+set}" ]
     then
-        echo "Equipment ID: $EQUIPMENT_ID"
-
-        return 1
-    else
-        if [ "${EQUIPMENT_ID+set}" ]
+        if [ -z "$EQUIPMENT_ID" ]
         then
-            if [ -z "$EQUIPMENT_ID" ]
-            then
-                echo "Equipment ID cannot be empty!"
-            else
-                echo "Invalid equipment ID (e.g. 1234)!"
-            fi
+            echo "Equipment ID cannot be empty!"
+        elif echo "${EQUIPMENT_ID}" | grep -Eq "[0-9]{4}"
+        then
+            echo "Equipment ID: $EQUIPMENT_ID"
+
+            return 1
+        else
+            echo "Invalid equipment ID (e.g. 1234)!"
         fi
-
-        read -p "Equipment ID: " EQUIPMENT_ID
-
-        return 0
     fi
+
+    read -p "Equipment ID: " EQUIPMENT_ID
+
+    return 0
 }
 
 read_equipment_type() {
-    if echo "${EQUIPMENT_TYPE}" | grep -Eq ".+"
+    if [ "${EQUIPMENT_TYPE+set}" ]
     then
-        echo "Type: $EQUIPMENT_TYPE"
-
-        return 1
-    else
-        if [ "${EQUIPMENT_TYPE+set}" ]
+        if [ -z "$EQUIPMENT_TYPE" ]
         then
-            if [ -z "$EQUIPMENT_TYPE" ]
-            then
-                echo "Equipment type cannot be empty!"
-            else
-                echo "Invalid equipment type!"
-            fi
+            echo "Equipment type cannot be empty!"
+        elif echo "${EQUIPMENT_TYPE}" | grep -Eq ".+"
+        then
+            echo "Type: $EQUIPMENT_TYPE"
+
+            return 1
+        else
+            echo "Invalid equipment type!"
         fi
-
-        read -p "Type: " EQUIPMENT_TYPE
-
-        return 0
     fi
+
+    read -p "Type: " EQUIPMENT_TYPE
+
+    return 0
 }
 
 read_equipment_model() {
-    if echo "${EQUIPMENT_MODEL}" | grep -Eq ".+"
+    if [ "${EQUIPMENT_MODEL+set}" ]
     then
-        echo "Model: $EQUIPMENT_MODEL"
-
-        return 1
-    else
-        if [ "${EQUIPMENT_MODEL+set}" ]
+        if [ -z "$EQUIPMENT_MODEL" ]
         then
-            if [ -z "$EQUIPMENT_MODEL" ]
-            then
-                echo "Equipment model cannot be empty!"
-            else
-                echo "Invalid equipment model!"
-            fi
+            echo "Equipment model cannot be empty!"
+        elif echo "${EQUIPMENT_MODEL}" | grep -Eq ".+"
+        then
+            echo "Model: $EQUIPMENT_MODEL"
+
+            return 1
+        else
+            echo "Invalid equipment model!"
         fi
-
-        read -p "Model: " EQUIPMENT_MODEL
-
-        return 0
     fi
+
+    read -p "Model: " EQUIPMENT_MODEL
+
+    return 0
 }
 
 read_equipment_number() {
-    if echo "${EQUIPMENT_NUMBER}" | grep -Eq "SN[0-9]{9}"
+    if [ "${EQUIPMENT_NUMBER+set}" ]
     then
-        echo "Serial Number: $EQUIPMENT_NUMBER"
-
-        return 1
-    else
-        if [ "${EQUIPMENT_NUMBER+set}" ]
+        if [ -z "$EQUIPMENT_NUMBER" ]
         then
-            if [ -z "$EQUIPMENT_NUMBER" ]
-            then
-                echo "Equipment serial number cannot be empty!"
-            else
-                echo "Invalid equipment serial number (e.g. SN123456789)!"
-            fi
+            echo "Equipment serial number cannot be empty!"
+        elif echo "${EQUIPMENT_NUMBER}" | grep -Eq "SN[0-9]{9}"
+        then
+            echo "Serial Number: $EQUIPMENT_NUMBER"
+
+            return 1
+        else
+            echo "Invalid equipment serial number (e.g. SN123456789)!"
         fi
-
-        read -p "Serial Number: " EQUIPMENT_NUMBER
-
-        EQUIPMENT_NUMBER=$(echo "$EQUIPMENT_NUMBER" | tr '[:lower:]' '[:upper:]')
-
-        return 0
     fi
+
+    read -p "Serial Number: " EQUIPMENT_NUMBER
+
+    EQUIPMENT_NUMBER=$(echo "$EQUIPMENT_NUMBER" | tr '[:lower:]' '[:upper:]')
+
+    return 0
 }
 
 read_equipment_status() {
-    if [ "${EQUIPMENT_STATUS}" = "a" ]
+    if [ "${EQUIPMENT_STATUS+set}" ]
     then
-        echo "Status: Available"
-    elif [ "${EQUIPMENT_STATUS}" = "u" ]
-    then
-        echo "Status: Unavailable"
-    else
-        if [ "${EQUIPMENT_STATUS+set}" ]
+        if [ -z "${EQUIPMENT_STATUS+set}" ]
         then
             echo "Invalid status!"
+        else
+            echo "Status: $EQUIPMENT_STATUS"
+            return 1
         fi
-
-        read -n 1 -p "Status (Available / Unavailable): " EQUIPMENT_STATUS
-
-        EQUIPMENT_STATUS=$(echo "$EQUIPMENT_STATUS" | tr '[:upper:]' '[:lower:]')
-
-        return 0
     fi
 
-    return 1
+    read -n 1 -p "Status (Available / Unavailable): " EQUIPMENT_STATUS
+
+    EQUIPMENT_STATUS=$(echo "$EQUIPMENT_STATUS" | tr '[:upper:]' '[:lower:]')
+
+    case $EQUIPMENT_STATUS in
+        "a")
+            EQUIPMENT_STATUS="Available"
+            ;;
+
+        "u")
+            EQUIPMENT_STATUS="Unavailable"
+            ;;
+
+        *)
+            EQUIPMENT_STATUS=""
+            ;;
+    esac
+
+    return 0
 }
 
 read_equipment_purchase() {
-    if echo "${EQUIPMENT_PURCHASE}" | grep -Eq "[0-9]{2}-[0-9]{2}-[0-9]{4}"
+    if [ "${EQUIPMENT_PURCHASE+set}" ]
     then
-        echo "Purchase Date (MM-DD-YYYY): $EQUIPMENT_PURCHASE"
-
-        return 1
-    else
-        if [ "${EQUIPMENT_PURCHASE+set}" ]
+        if echo "${EQUIPMENT_PURCHASE}" | grep -Eq "$DATE_REGEX"
         then
+            echo "Purchase Date (MM-DD-YYYY): $EQUIPMENT_PURCHASE"
+
+            return 1
+        else
             echo "Invalid date!"
         fi
-
-        read -p "Purchase Date (MM-DD-YYYY): "
-
-        if [ -z "$EQUIPMENT_PURCHASE" ]
-        then
-            EQUIPMENT_PURCHASE=$(date "+%m-%d-%Y")
-        fi
-
-        return 0
     fi
+
+    read -p "Purchase Date (MM-DD-YYYY): " EQUIPMENT_PURCHASE
+
+    if [ -z "$EQUIPMENT_PURCHASE" ]
+    then
+        EQUIPMENT_PURCHASE=$(date "+%m-%d-%Y")
+    fi
+
+    return 0
 }
 
 read_equipment_warranty() {
-    if echo "${EQUIPMENT_WARRANTY}" | grep -Eq "[0-9]{2}-[0-9]{2}-[0-9]{4}"
+    if [ "${EQUIPMENT_WARRANTY+set}" ]
     then
-        echo "Warranty Date (MM-DD-YYYY): $EQUIPMENT_WARRANTY"
-
-        return 1
-    else
-        if [ "${EQUIPMENT_WARRANTY+set}" ]
+        if [ -z "$EQUIPMENT_WARRANTY" ]
         then
-            if [ -z "$EQUIPMENT_WARRANTY" ]
-            then
-                echo "Equipment warranty date cannot be empty!"
-            else
-                echo "Invalid date!"
-            fi
+            echo "Equipment warranty date cannot be empty!"
+        elif echo "${EQUIPMENT_WARRANTY}" | grep -Eq "$DATE_REGEX"
+        then
+            echo "Warranty Date (MM-DD-YYYY): $EQUIPMENT_WARRANTY"
+
+            return 1
+        else
+            echo "Invalid date!"
         fi
-
-        read -p "Warranty Date (MM-DD-YYYY): " EQUIPMENT_WARRANTY
-
-        return 0
     fi
+
+    read -p "Warranty Date (MM-DD-YYYY): " EQUIPMENT_WARRANTY
+
+    return 0
 }
 
-STATE="menu"
+serialize() {
+    EQUIPMENT_STR="$EQUIPMENT_ID:$EQUIPMENT_TYPE:$EQUIPMENT_MODEL:$EQUIPMENT_NUMBER:$EQUIPMENT_STATUS:$EQUIPMENT_PURCHASE:$EQUIPMENT_WARRANTY"
+}
+
+if [ ! -e "$EQUIPMENT_FILE" ]
+then
+    echo "ID:Type:Model:Serial:Status:PurchaseDate:WarrantyDate" > "$EQUIPMENT_FILE"
+fi
 
 while true
 do
@@ -255,6 +266,8 @@ do
 
             if [ "${EQUIPMENT_CONTINUE+set}" ]
             then
+                serialize
+                echo $EQUIPMENT_STR >> "$EQUIPMENT_FILE"
                 unset_equipment
                 unset EQUIPMENT_CONTINUE
             else
