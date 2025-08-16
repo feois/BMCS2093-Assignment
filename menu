@@ -2,118 +2,139 @@
 
 STATE="menu"
 EQUIPMENT_FILE="Equipment.txt"
-DATE_REGEX="[0-9]{2}-[0-9]{2}-[0-9]{4}"
+DATE_REGEX="^[0-9]{2}-[0-9]{2}-[0-9]{4}$"
+ENTRY_PER_PAGE=3
+PAGE=0
+
+echo_line() {
+    echo ========================
+}
 
 unset_equipment() {
-    unset EQUIPMENT_ID EQUIPMENT_TYPE EQUIPMENT_MODEL EQUIPMENT_NUMBER EQUIPMENT_STATUS EQUIPMENT_PURCHASE EQUIPMENT_WARRANTY
+    unset EQUIPMENT_ID EQUIPMENT_TYPE EQUIPMENT_MODEL EQUIPMENT_SERIAL EQUIPMENT_STATUS EQUIPMENT_PURCHASE EQUIPMENT_WARRANTY
 }
 
 read_equipment_id() {
+    local DEFAULT=$3
+
     if [ "${EQUIPMENT_ID+set}" ]
     then
         if [ -z "$EQUIPMENT_ID" ]
         then
             echo "Equipment ID cannot be empty!"
-        elif echo "${EQUIPMENT_ID}" | egrep -q "[0-9]{4}"
+        elif echo "${EQUIPMENT_ID}" | egrep -q "^[0-9]{4}$"
         then
             if egrep -q "^$EQUIPMENT_ID:" "$EQUIPMENT_FILE"
             then
                 echo "Equipment with ID $EQUIPMENT_ID already exists!"
             else
-                echo "Equipment ID: $EQUIPMENT_ID"
+                echo "$2: $EQUIPMENT_ID"
 
-                return 1
+                return 0
             fi
         else
             echo "Invalid equipment ID (e.g. 1234)!"
         fi
     fi
 
-    read -p "Equipment ID: " EQUIPMENT_ID
+    read -p "$1: " EQUIPMENT_ID
+    EQUIPMENT_ID=${EQUIPMENT_ID:-"$DEFAULT"}
 
-    return 0
+    return 1
 }
 
 read_equipment_type() {
+    local DEFAULT=$3
+
     if [ "${EQUIPMENT_TYPE+set}" ]
     then
         if [ -z "$EQUIPMENT_TYPE" ]
         then
             echo "Equipment type cannot be empty!"
-        elif echo "${EQUIPMENT_TYPE}" | egrep -q ".+"
+        elif echo "${EQUIPMENT_TYPE}" | grep -v -q ':'
         then
-            echo "Type: $EQUIPMENT_TYPE"
+            echo "$2: $EQUIPMENT_TYPE"
 
-            return 1
+            return 0
         else
-            echo "Invalid equipment type!"
+            echo "Colon is not permitted!"
         fi
     fi
 
-    read -p "Type: " EQUIPMENT_TYPE
+    read -p "$1: " EQUIPMENT_TYPE
+    EQUIPMENT_TYPE=${EQUIPMENT_TYPE:-"$DEFAULT"}
 
-    return 0
+    return 1
 }
 
 read_equipment_model() {
+    local DEFAULT=$3
+
     if [ "${EQUIPMENT_MODEL+set}" ]
     then
         if [ -z "$EQUIPMENT_MODEL" ]
         then
             echo "Equipment model cannot be empty!"
-        elif echo "${EQUIPMENT_MODEL}" | egrep -q ".+"
+        elif echo "${EQUIPMENT_MODEL}" | grep -v -q ':'
         then
-            echo "Model: $EQUIPMENT_MODEL"
+            echo "$2: $EQUIPMENT_MODEL"
 
-            return 1
+            return 0
         else
-            echo "Invalid equipment model!"
+            echo "Colon is not permitted!"
         fi
     fi
 
-    read -p "Model: " EQUIPMENT_MODEL
+    read -p "$1: " EQUIPMENT_MODEL
+    EQUIPMENT_MODEL=${EQUIPMENT_MODEL:-"$DEFAULT"}
 
-    return 0
+    return 1
 }
 
-read_equipment_number() {
-    if [ "${EQUIPMENT_NUMBER+set}" ]
+read_equipment_serial() {
+    local DEFAULT=$3
+
+    if [ "${EQUIPMENT_SERIAL+set}" ]
     then
-        if [ -z "$EQUIPMENT_NUMBER" ]
+        if [ -z "$EQUIPMENT_SERIAL" ]
         then
             echo "Equipment serial number cannot be empty!"
-        elif echo "${EQUIPMENT_NUMBER}" | egrep -q "SN[0-9]{9}"
+        elif echo "${EQUIPMENT_SERIAL}" | egrep -q "^SN[0-9]{9}$"
         then
-            echo "Serial Number: $EQUIPMENT_NUMBER"
+            echo "$2: $EQUIPMENT_SERIAL"
 
-            return 1
+            return 0
         else
             echo "Invalid equipment serial number (e.g. SN123456789)!"
         fi
     fi
 
-    read -p "Serial Number: " EQUIPMENT_NUMBER
+    read -p "$1: " EQUIPMENT_SERIAL
 
-    EQUIPMENT_NUMBER=$(echo "$EQUIPMENT_NUMBER" | tr '[:lower:]' '[:upper:]')
+    EQUIPMENT_SERIAL=$(echo "$EQUIPMENT_SERIAL" | tr '[:lower:]' '[:upper:]')
+    EQUIPMENT_SERIAL=${EQUIPMENT_SERIAL:-"$DEFAULT"}
 
-    return 0
+    return 1
 }
 
 read_equipment_status() {
+    local DEFAULT=$3
+
     if [ "${EQUIPMENT_STATUS+set}" ]
     then
         if [ -z "${EQUIPMENT_STATUS+set}" ]
         then
             echo "Invalid status!"
         else
-            echo "Status: $EQUIPMENT_STATUS"
-            return 1
+            echo "$2: $EQUIPMENT_STATUS"
+            return 0
         fi
     fi
 
-    read -n 1 -p "Status (Available / Unavailable): " EQUIPMENT_STATUS
+    read -n 1 -p "$1: " EQUIPMENT_STATUS
 
     EQUIPMENT_STATUS=$(echo "$EQUIPMENT_STATUS" | tr '[:upper:]' '[:lower:]')
+    EQUIPMENT_STATUS=${EQUIPMENT_STATUS:-"$DEFAULT"}
 
     case $EQUIPMENT_STATUS in
         "a")
@@ -129,33 +150,33 @@ read_equipment_status() {
             ;;
     esac
 
-    return 0
+    return 1
 }
 
 read_equipment_purchase() {
+    local DEFAULT=${3:-"$(date '+%m-%d-%Y')"}
+
     if [ "${EQUIPMENT_PURCHASE+set}" ]
     then
         if echo "${EQUIPMENT_PURCHASE}" | egrep -q "$DATE_REGEX"
         then
-            echo "Purchase Date (MM-DD-YYYY): $EQUIPMENT_PURCHASE"
+            echo "$2: $EQUIPMENT_PURCHASE"
 
-            return 1
+            return 0
         else
             echo "Invalid date!"
         fi
     fi
 
-    read -p "Purchase Date (MM-DD-YYYY): " EQUIPMENT_PURCHASE
+    read -p "$1: " EQUIPMENT_PURCHASE
+    EQUIPMENT_PURCHASE=${EQUIPMENT_PURCHASE:-"$DEFAULT"}
 
-    if [ -z "$EQUIPMENT_PURCHASE" ]
-    then
-        EQUIPMENT_PURCHASE=$(date "+%m-%d-%Y")
-    fi
-
-    return 0
+    return 1
 }
 
 read_equipment_warranty() {
+    local DEFAULT=$3
+
     if [ "${EQUIPMENT_WARRANTY+set}" ]
     then
         if [ -z "$EQUIPMENT_WARRANTY" ]
@@ -163,21 +184,54 @@ read_equipment_warranty() {
             echo "Equipment warranty date cannot be empty!"
         elif echo "${EQUIPMENT_WARRANTY}" | egrep -q "$DATE_REGEX"
         then
-            echo "Warranty Date (MM-DD-YYYY): $EQUIPMENT_WARRANTY"
+            echo "$2: $EQUIPMENT_WARRANTY"
 
-            return 1
+            return 0
         else
             echo "Invalid date!"
         fi
     fi
 
-    read -p "Warranty Date (MM-DD-YYYY): " EQUIPMENT_WARRANTY
+    read -p "$1: " EQUIPMENT_WARRANTY
+    EQUIPMENT_WARRANTY=${EQUIPMENT_WARRANTY:-"$DEFAULT"}
+
+    return 1
+}
+
+read_quit_continue() {
+    echo "Press (q) to return to Equipment Maintenance Menu."
+    echo
+
+    read -n 1 -p "$1? (y)es or (q)uit: " READ_CONTINUE
+
+    READ_CONTINUE=$(echo "$READ_CONTINUE" | tr '[:upper:]' '[:lower:]')
+
+    case $READ_CONTINUE in
+        "y") ;;
+        "q") ;;
+        *)
+            return 1
+            ;;
+    esac
 
     return 0
 }
 
 serialize() {
-    EQUIPMENT_STR="$EQUIPMENT_ID:$EQUIPMENT_TYPE:$EQUIPMENT_MODEL:$EQUIPMENT_NUMBER:$EQUIPMENT_STATUS:$EQUIPMENT_PURCHASE:$EQUIPMENT_WARRANTY"
+    EQUIPMENT_STR="$EQUIPMENT_ID:$EQUIPMENT_TYPE:$EQUIPMENT_MODEL:$EQUIPMENT_SERIAL:$EQUIPMENT_STATUS:$EQUIPMENT_PURCHASE:$EQUIPMENT_WARRANTY"
+}
+
+deserialize() {
+    local EQUIPMENT_ARRAY
+
+    IFS=':' read -a EQUIPMENT_ARRAY <<< "$EQUIPMENT_STR"
+    EQUIPMENT_ID="${EQUIPMENT_ARRAY[0]}"
+    EQUIPMENT_TYPE="${EQUIPMENT_ARRAY[1]}"
+    EQUIPMENT_MODEL="${EQUIPMENT_ARRAY[2]}"
+    EQUIPMENT_SERIAL="${EQUIPMENT_ARRAY[3]}"
+    EQUIPMENT_STATUS="${EQUIPMENT_ARRAY[4]}"
+    EQUIPMENT_PURCHASE="${EQUIPMENT_ARRAY[5]}"
+    EQUIPMENT_WARRANTY="${EQUIPMENT_ARRAY[6]}"
 }
 
 if [ ! -e "$EQUIPMENT_FILE" ]
@@ -211,6 +265,14 @@ do
                         STATE="add"
                         ;;
 
+                    "S")
+                        STATE="search"
+                        ;;
+
+#                     "U")
+#                         STATE="update"
+#                         ;;
+
                     "Q")
                         STATE="exit"
                         ;;
@@ -235,53 +297,137 @@ do
             ;;
 
         "add")
-            cat <<- EOF
-			Add Equipment Details Form
-			========================
-			EOF
+            echo "Add Equipment Details Form"
+            echo_line
 
-            if read_equipment_id; then continue; fi
-            if read_equipment_type; then continue; fi
-            if read_equipment_model; then continue; fi
-            if read_equipment_number; then continue; fi
-            if read_equipment_status; then continue; fi
-            if read_equipment_purchase; then continue; fi
-            if read_equipment_warranty; then continue; fi
+            if ! read_equipment_id "Equipment ID" "Equipment ID"; then continue; fi
+            if ! read_equipment_type "Type" "Type"; then continue; fi
+            if ! read_equipment_model "Model" "Model"; then continue; fi
+            if ! read_equipment_serial "Serial Number" "Serial Number"; then continue; fi
+            if ! read_equipment_status "Status (Available / Unavailable)" "Status"; then continue; fi
+            if ! read_equipment_purchase "Purchase Date (MM-DD-YYYY)" "Purchase Date"; then continue; fi
+            if ! read_equipment_warranty "Warranty Date (MM-DD-YYYY)" "Warranty Date"; then continue; fi
 
             echo
-            echo "Press (q) to return to Equipment Maintenance Menu."
-            echo
 
-            if [ "${EQUIPMENT_CONTINUE+set}" ]
-            then
-                case $EQUIPMENT_CONTINUE in
-                    "y")
-                        # STATE="add"
-                        ;;
-
-                    "q")
-                        STATE="menu"
-                        ;;
-
-                    *)
-                        unset EQUIPMENT_CONTINUE
-                        ;;
-                esac
-            fi
-
-            if [ "${EQUIPMENT_CONTINUE+set}" ]
+            if read_quit_continue "Add another new Equipment details"
             then
                 serialize
                 echo $EQUIPMENT_STR >> "$EQUIPMENT_FILE"
                 unset_equipment
-                unset EQUIPMENT_CONTINUE
-            else
-                read -n 1 -p "Add another new Equipment details? (y)es or (q)uit: " EQUIPMENT_CONTINUE
 
-                EQUIPMENT_CONTINUE=$(echo "$EQUIPMENT_CONTINUE" | tr '[:upper:]' '[:lower:]')
+                if [ "$READ_CONTINUE" = "q" ]
+                then
+                    STATE="menu"
+                fi
             fi
 
             ;;
+
+        "search")
+            echo "Search Equipment"
+            echo
+            if ! read_equipment_serial "Enter Serial Number" "Serial Number"
+            then
+                PAGE=0
+                continue
+            fi
+            echo
+            echo_line
+            echo
+
+            EQUIPMENTS_MATCHED=$(egrep "^.*:.*:.*:$EQUIPMENT_SERIAL:.*:.*:.*$" "$EQUIPMENT_FILE")
+            EQUIPMENTS_COUNT=$(echo "$EQUIPMENTS_MATCHED" | wc -l)
+
+            if [ -z "$EQUIPMENTS_MATCHED" ]
+            then
+                echo "No equipment found with the serial number $EQUIPMENT_SERIAL"
+                echo
+                echo_line
+                echo
+            else
+                echo "$EQUIPMENTS_MATCHED" | tail -n $(( EQUIPMENTS_COUNT - PAGE * ENTRY_PER_PAGE )) | head -n $(( ENTRY_PER_PAGE )) | while IFS= read EQUIPMENT_STR
+                do
+                    deserialize
+                    echo "Equipment ID: $EQUIPMENT_ID"
+                    echo "Type: $EQUIPMENT_TYPE"
+                    echo "Model: $EQUIPMENT_MODEL"
+                    echo "Status: $EQUIPMENT_STATUS"
+                    echo "Purchase Date: $EQUIPMENT_PURCHASE"
+                    echo "Warranty Date: $EQUIPMENT_WARRANTY"
+                    echo
+                    echo_line
+                    echo
+                done
+                echo "Showing $ENTRY_PER_PAGE equipments per page (Page $(( PAGE + 1 )) of $(( (EQUIPMENTS_COUNT - 1) / ENTRY_PER_PAGE + 1 )))"
+                echo
+                echo "Press - and = to decrease and increase equipments shown per page respectively."
+                echo "Press [ and ] to go to previous and next page respectively. "
+            fi
+
+            if read_quit_continue "Search another equipment"
+            then
+                unset_equipment
+
+                if [ "$READ_CONTINUE" = "q" ]
+                then
+                    STATE="menu"
+                fi
+            else
+                case $READ_CONTINUE in
+                    "-")
+                        if (( ENTRY_PER_PAGE > 1 ))
+                        then
+                            ENTRY_PER_PAGE=$(( ENTRY_PER_PAGE - 1 ))
+                            PAGE=0
+                        fi
+                        ;;
+
+                    "=")
+                        ENTRY_PER_PAGE=$(( ENTRY_PER_PAGE + 1 ))
+                        PAGE=0
+                        ;;
+
+                    "[")
+                        if (( PAGE > 0 ))
+                        then
+                            PAGE=$(( PAGE - 1 ))
+                        fi
+                        ;;
+
+                    "]")
+                        if (( (PAGE + 1) * ENTRY_PER_PAGE < EQUIPMENTS_COUNT ))
+                        then
+                            PAGE=$(( PAGE + 1 ))
+                        fi
+                        ;;
+                esac
+            fi
+
+            ;;
+
+#         "update")
+#             echo "Update Equipment details"
+#             echo
+#             if ! read_equipment_id "Enter Equipment ID" "Equipment ID"; then continue; fi
+#             echo
+#             echo_line
+#             echo
+#
+#             if egrep -q "^$EQUIPMENT_ID:.*:.*:.*:.*:.*:.*$" "$EQUIPMENT_FILE"
+#             then
+#                 if ! read_equipment_serial "Serial Number (Current: $EQUIPMENT_SERIAL)" "Serial Number"; then continue; fi
+#                 if ! read_equipment_type "Type (Current: $EQUIPMENT_TYPE)" "Type"; then continue; fi
+#                 if ! read_equipment_model "Model (Current: $EQUIPMENT_MODEL)" "Model"; then continue; fi
+#
+#             else
+#                 echo "No equipment with ID $EQUIPMENT_ID exists"
+#             fi
+#
+#             echo
+#             echo_line
+#             echo
+#             ;;
 
         "exit")
             echo "Exit"
