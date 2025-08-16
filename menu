@@ -24,7 +24,7 @@ read_equipment_id() {
             echo "Equipment ID cannot be empty!"
         elif echo "${EQUIPMENT_ID}" | egrep -q "^[0-9]{4}$"
         then
-            if egrep -q "^$EQUIPMENT_ID:" "$EQUIPMENT_FILE"
+            if [ -z "$4" ] && egrep -q "^$EQUIPMENT_ID:" "$EQUIPMENT_FILE"
             then
                 echo "Equipment with ID $EQUIPMENT_ID already exists!"
             else
@@ -122,7 +122,7 @@ read_equipment_status() {
 
     if [ "${EQUIPMENT_STATUS+set}" ]
     then
-        if [ -z "${EQUIPMENT_STATUS+set}" ]
+        if [ -z "$EQUIPMENT_STATUS" ]
         then
             echo "Invalid status!"
         else
@@ -133,22 +133,26 @@ read_equipment_status() {
 
     read -n 1 -p "$1: " EQUIPMENT_STATUS
 
-    EQUIPMENT_STATUS=$(echo "$EQUIPMENT_STATUS" | tr '[:upper:]' '[:lower:]')
-    EQUIPMENT_STATUS=${EQUIPMENT_STATUS:-"$DEFAULT"}
+    if [ -z "$EQUIPMENT_STATUS" ] && [ "$DEFAULT" ]
+    then
+        EQUIPMENT_STATUS="$DEFAULT"
+    else
+        EQUIPMENT_STATUS=$(echo "$EQUIPMENT_STATUS" | tr '[:upper:]' '[:lower:]')
 
-    case $EQUIPMENT_STATUS in
-        "a")
-            EQUIPMENT_STATUS="Available"
-            ;;
+        case $EQUIPMENT_STATUS in
+            "a")
+                EQUIPMENT_STATUS="Available"
+                ;;
 
-        "u")
-            EQUIPMENT_STATUS="Unavailable"
-            ;;
+            "u")
+                EQUIPMENT_STATUS="Unavailable"
+                ;;
 
-        *)
-            EQUIPMENT_STATUS=""
-            ;;
-    esac
+            *)
+                EQUIPMENT_STATUS=""
+                ;;
+        esac
+    fi
 
     return 1
 }
@@ -202,19 +206,33 @@ read_quit_continue() {
     echo "Press (q) to return to Equipment Maintenance Menu."
     echo
 
-    read -n 1 -p "$1? (y)es or (q)uit: " READ_CONTINUE
+    if [ -z "$1" ]
+    then
+        read -n 1 READ_CONTINUE
 
-    READ_CONTINUE=$(echo "$READ_CONTINUE" | tr '[:upper:]' '[:lower:]')
+        READ_CONTINUE=$(echo "$READ_CONTINUE" | tr '[:upper:]' '[:lower:]')
 
-    case $READ_CONTINUE in
-        "y") ;;
-        "q") ;;
-        *)
-            return 1
-            ;;
-    esac
+        if [ "$READ_CONTINUE" = "q" ]
+        then
+            return 0
+        fi
+    else
+        read -n 1 -p "$1? (y)es or (q)uit: " READ_CONTINUE
 
-    return 0
+        READ_CONTINUE=$(echo "$READ_CONTINUE" | tr '[:upper:]' '[:lower:]')
+
+        case $READ_CONTINUE in
+            "y") ;;
+            "q") ;;
+            *)
+                return 1
+                ;;
+        esac
+
+        return 0
+    fi
+
+    return 1
 }
 
 serialize() {
@@ -222,16 +240,11 @@ serialize() {
 }
 
 deserialize() {
-    local EQUIPMENT_ARRAY
+    local VARIABLE_PREFIX=$1
 
-    IFS=':' read -a EQUIPMENT_ARRAY <<< "$EQUIPMENT_STR"
-    EQUIPMENT_ID="${EQUIPMENT_ARRAY[0]}"
-    EQUIPMENT_TYPE="${EQUIPMENT_ARRAY[1]}"
-    EQUIPMENT_MODEL="${EQUIPMENT_ARRAY[2]}"
-    EQUIPMENT_SERIAL="${EQUIPMENT_ARRAY[3]}"
-    EQUIPMENT_STATUS="${EQUIPMENT_ARRAY[4]}"
-    EQUIPMENT_PURCHASE="${EQUIPMENT_ARRAY[5]}"
-    EQUIPMENT_WARRANTY="${EQUIPMENT_ARRAY[6]}"
+    VARIABLE_PREFIX=${VARIABLE_PREFIX:-"EQUIPMENT"}
+
+    IFS=':' read "${VARIABLE_PREFIX}_ID" "${VARIABLE_PREFIX}_TYPE" "${VARIABLE_PREFIX}_MODEL" "${VARIABLE_PREFIX}_SERIAL" "${VARIABLE_PREFIX}_STATUS" "${VARIABLE_PREFIX}_PURCHASE" "${VARIABLE_PREFIX}_WARRANTY" <<< "$EQUIPMENT_STR"
 }
 
 if [ ! -e "$EQUIPMENT_FILE" ]
@@ -269,9 +282,9 @@ do
                         STATE="search"
                         ;;
 
-#                     "U")
-#                         STATE="update"
-#                         ;;
+                    "U")
+                        STATE="update"
+                        ;;
 
                     "Q")
                         STATE="exit"
@@ -406,28 +419,52 @@ do
 
             ;;
 
-#         "update")
-#             echo "Update Equipment details"
-#             echo
-#             if ! read_equipment_id "Enter Equipment ID" "Equipment ID"; then continue; fi
-#             echo
-#             echo_line
-#             echo
-#
-#             if egrep -q "^$EQUIPMENT_ID:.*:.*:.*:.*:.*:.*$" "$EQUIPMENT_FILE"
-#             then
-#                 if ! read_equipment_serial "Serial Number (Current: $EQUIPMENT_SERIAL)" "Serial Number"; then continue; fi
-#                 if ! read_equipment_type "Type (Current: $EQUIPMENT_TYPE)" "Type"; then continue; fi
-#                 if ! read_equipment_model "Model (Current: $EQUIPMENT_MODEL)" "Model"; then continue; fi
-#
-#             else
-#                 echo "No equipment with ID $EQUIPMENT_ID exists"
-#             fi
-#
-#             echo
-#             echo_line
-#             echo
-#             ;;
+        "update")
+            echo "Update Equipment details"
+            echo
+            if ! read_equipment_id "Enter Equipment ID" "Equipment ID" "" "ignore"; then continue; fi
+            echo
+            echo_line
+            echo
+
+            EQUIPMENT_STR=$(egrep "^$EQUIPMENT_ID:.*:.*:.*:.*:.*:.*$" "$EQUIPMENT_FILE")
+
+            if [ -z "$EQUIPMENT_STR" ]
+            then
+                echo "No equipment with ID $EQUIPMENT_ID exists"
+            else
+                deserialize EQUIPMENT_ORIGINAL
+
+                if ! read_equipment_serial "Serial Number [$EQUIPMENT_ORIGINAL_SERIAL]" "Serial Number" "$EQUIPMENT_ORIGINAL_SERIAL"; then continue; fi
+                if ! read_equipment_type "Type [$EQUIPMENT_ORIGINAL_TYPE]" "Type" "$EQUIPMENT_ORIGINAL_TYPE"; then continue; fi
+                if ! read_equipment_model "Model [$EQUIPMENT_ORIGINAL_MODEL]" "Model" "$EQUIPMENT_ORIGINAL_MODEL"; then continue; fi
+                if ! read_equipment_status "Status (Available /Unavailable) [$EQUIPMENT_ORIGINAL_STATUS]" "Status" "$EQUIPMENT_ORIGINAL_STATUS"; then continue; fi
+                if ! read_equipment_purchase "Purchase Date (MM-DD-YYYY) [$EQUIPMENT_ORIGINAL_PURCHASE]" "Purchase Date" "$EQUIPMENT_ORIGINAL_PURCHASE"; then continue; fi
+                if ! read_equipment_warranty "Warranty Date (MM-DD-YYYY) [$EQUIPMENT_ORIGINAL_WARRANTY]" "Warranty Date" "$EQUIPMENT_ORIGINAL_WARRANTY"; then continue; fi
+            fi
+
+            echo
+            echo_line
+            echo
+
+            if [ "$EQUIPMENT_STR" ]
+            then
+                EQUIPMENT_STR="Are you sure you want to UPDATE the above Equipment Details"
+            fi
+
+            if read_quit_continue "$EQUIPMENT_STR"
+            then
+                if [ "$READ_CONTINUE" = "y" ]
+                then
+                    serialize
+                    sed -i "s/$EQUIPMENT_ID:.*/$EQUIPMENT_STR/" "$EQUIPMENT_FILE"
+                fi
+
+                unset_equipment
+                STATE="menu"
+            fi
+
+            ;;
 
         "exit")
             echo "Exit"
