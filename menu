@@ -11,11 +11,11 @@ echo_line() {
 }
 
 unset_equipment() {
-    unset EQUIPMENT_ID EQUIPMENT_TYPE EQUIPMENT_MODEL EQUIPMENT_SERIAL EQUIPMENT_STATUS EQUIPMENT_PURCHASE EQUIPMENT_WARRANTY
+    unset EQUIPMENT_ID EQUIPMENT_TYPE EQUIPMENT_MODEL EQUIPMENT_SERIAL EQUIPMENT_STATUS EQUIPMENT_PURCHASE EQUIPMENT_WARRANTY EQUIPMENT_STR
 }
 
 read_equipment_id() {
-    local DEFAULT=$3
+    local DEFAULT=$4
 
     if [ "${EQUIPMENT_ID+set}" ]
     then
@@ -24,11 +24,14 @@ read_equipment_id() {
             echo "Equipment ID cannot be empty!"
         elif echo "${EQUIPMENT_ID}" | egrep -q "^[0-9]{4}$"
         then
-            if [ -z "$4" ] && egrep -q "^$EQUIPMENT_ID:" "$EQUIPMENT_FILE"
+            if [ "$1" = "new" ] && egrep -q "^$EQUIPMENT_ID:" "$EQUIPMENT_FILE"
             then
                 echo "Equipment with ID $EQUIPMENT_ID already exists!"
+#             elif [ "$1" = "search" ] && ! egrep -q "^$EQUIPMENT_ID:" "$EQUIPMENT_FILE"
+#             then
+#                 echo "Equipment with ID $EQUIPMENT_ID does not exist!"
             else
-                echo "$2: $EQUIPMENT_ID"
+                echo "$3: $EQUIPMENT_ID"
 
                 return 0
             fi
@@ -37,7 +40,7 @@ read_equipment_id() {
         fi
     fi
 
-    read -p "$1: " EQUIPMENT_ID
+    read -p "$2: " EQUIPMENT_ID
     EQUIPMENT_ID=${EQUIPMENT_ID:-"$DEFAULT"}
 
     return 1
@@ -286,6 +289,10 @@ do
                         STATE="update"
                         ;;
 
+                    "D")
+                        STATE="delete"
+                        ;;
+
                     "Q")
                         STATE="exit"
                         ;;
@@ -313,7 +320,7 @@ do
             echo "Add Equipment Details Form"
             echo_line
 
-            if ! read_equipment_id "Equipment ID" "Equipment ID"; then continue; fi
+            if ! read_equipment_id new "Equipment ID" "Equipment ID"; then continue; fi
             if ! read_equipment_type "Type" "Type"; then continue; fi
             if ! read_equipment_model "Model" "Model"; then continue; fi
             if ! read_equipment_serial "Serial Number" "Serial Number"; then continue; fi
@@ -420,9 +427,9 @@ do
             ;;
 
         "update")
-            echo "Update Equipment details"
+            echo "Update Equipment Details"
             echo
-            if ! read_equipment_id "Enter Equipment ID" "Equipment ID" "" "ignore"; then continue; fi
+            if ! read_equipment_id search "Enter Equipment ID" "Equipment ID"; then continue; fi
             echo
             echo_line
             echo
@@ -457,7 +464,53 @@ do
                 if [ "$READ_CONTINUE" = "y" ]
                 then
                     serialize
-                    sed -i "s/$EQUIPMENT_ID:.*/$EQUIPMENT_STR/" "$EQUIPMENT_FILE"
+                    sed -i "s/^$EQUIPMENT_ID:.*/$EQUIPMENT_STR/" "$EQUIPMENT_FILE"
+                fi
+
+                unset_equipment
+                STATE="menu"
+            fi
+
+            ;;
+
+        "delete")
+            echo "Delete Equipment Details"
+            echo
+            if ! read_equipment_id search "Enter Equipment ID" "Equipment ID"; then continue; fi
+            echo
+            echo_line
+            echo
+
+            EQUIPMENT_STR=$(egrep "^$EQUIPMENT_ID:.*:.*:.*:.*:.*:.*$" "$EQUIPMENT_FILE")
+
+            if [ -z "$EQUIPMENT_STR" ]
+            then
+                echo "No equipment with ID $EQUIPMENT_ID exists"
+            else
+                deserialize EQUIPMENT
+
+                echo "Serial Number: $EQUIPMENT_SERIAL"
+                echo "Type: $EQUIPMENT_TYPE"
+                echo "Model: $EQUIPMENT_MODEL"
+                echo "Status: $EQUIPMENT_STATUS"
+                echo "Purchase Date: $EQUIPMENT_PURCHASE"
+                echo "Warranty Date: $EQUIPMENT_WARRANTY"
+            fi
+
+            echo
+            echo_line
+            echo
+
+            if [ "$EQUIPMENT_STR" ]
+            then
+                EQUIPMENT_STR="Are you sure you want to DELETE the above Equipment Details"
+            fi
+
+            if read_quit_continue "$EQUIPMENT_STR"
+            then
+                if [ "$READ_CONTINUE" = "y" ]
+                then
+                    sed -i "/^$EQUIPMENT_ID:.*/d" "$EQUIPMENT_FILE"
                 fi
 
                 unset_equipment
