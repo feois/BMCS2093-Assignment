@@ -209,33 +209,22 @@ read_quit_continue() {
     echo "Press (q) to return to Equipment Maintenance Menu."
     echo
 
-    if [ -z "$1" ]
-    then
-        read -n 1 READ_CONTINUE
+    read -n 1 -p "$1? (y)es or (q)uit: " READ_CONTINUE
 
-        READ_CONTINUE=$(echo "$READ_CONTINUE" | tr '[:upper:]' '[:lower:]')
+    READ_CONTINUE=$(echo "$READ_CONTINUE" | tr '[:upper:]' '[:lower:]')
 
-        if [ "$READ_CONTINUE" = "q" ]
-        then
-            return 0
-        fi
-    else
-        read -n 1 -p "$1? (y)es or (q)uit: " READ_CONTINUE
+    [ "$READ_CONTINUE" = "y" ] || [ "$READ_CONTINUE" = "q" ]
+}
 
-        READ_CONTINUE=$(echo "$READ_CONTINUE" | tr '[:upper:]' '[:lower:]')
+read_quit() {
+    echo "Press (q) to return to Equipment Maintenance Menu."
+    echo
 
-        case $READ_CONTINUE in
-            "y") ;;
-            "q") ;;
-            *)
-                return 1
-                ;;
-        esac
+    read -n 1 READ_CONTINUE
 
-        return 0
-    fi
+    READ_CONTINUE=$(echo "$READ_CONTINUE" | tr '[:upper:]' '[:lower:]')
 
-    return 1
+    [ "$READ_CONTINUE" = "q" ]
 }
 
 serialize() {
@@ -248,6 +237,64 @@ deserialize() {
     VARIABLE_PREFIX=${VARIABLE_PREFIX:-"EQUIPMENT"}
 
     IFS=':' read "${VARIABLE_PREFIX}_ID" "${VARIABLE_PREFIX}_TYPE" "${VARIABLE_PREFIX}_MODEL" "${VARIABLE_PREFIX}_SERIAL" "${VARIABLE_PREFIX}_STATUS" "${VARIABLE_PREFIX}_PURCHASE" "${VARIABLE_PREFIX}_WARRANTY" <<< "$EQUIPMENT_STR"
+}
+
+read_page_operations() {
+    case $READ_CONTINUE in
+        "-")
+            if (( ENTRY_PER_PAGE > 1 ))
+            then
+                ENTRY_PER_PAGE=$(( ENTRY_PER_PAGE - 1 ))
+                PAGE=0
+            fi
+            ;;
+
+        "=")
+            ENTRY_PER_PAGE=$(( ENTRY_PER_PAGE + 1 ))
+            PAGE=0
+            ;;
+
+        "[")
+            if (( PAGE > 0 ))
+            then
+                PAGE=$(( PAGE - 1 ))
+            fi
+            ;;
+
+        "]")
+            if (( (PAGE + 1) * ENTRY_PER_PAGE < EQUIPMENTS_COUNT ))
+            then
+                PAGE=$(( PAGE + 1 ))
+            fi
+            ;;
+    esac
+}
+
+get_page() {
+    tail -n $(( EQUIPMENTS_COUNT - PAGE * ENTRY_PER_PAGE )) | head -n $(( ENTRY_PER_PAGE ))
+}
+
+echo_page_instructions() {
+    echo "Showing $ENTRY_PER_PAGE equipments per page (Page $(( PAGE + 1 )) of $(( (EQUIPMENTS_COUNT - 1) / ENTRY_PER_PAGE + 1 )))"
+    echo
+    echo "Press - and = to decrease and increase equipments shown per page respectively."
+    echo "Press [ and ] to go to previous and next page respectively. "
+}
+
+echo_equipments_model() {
+    while IFS= read -r EQUIPMENT_STR
+    do
+        deserialize
+        echo -e "$EQUIPMENT_MODEL\t$EQUIPMENT_ID\t$EQUIPMENT_TYPE\t$EQUIPMENT_SERIAL\t$EQUIPMENT_STATUS\t$EQUIPMENT_WARRANTY"
+    done
+}
+
+echo_equipments_status() {
+    while IFS= read -r EQUIPMENT_STR
+    do
+        deserialize
+        echo -e "$EQUIPMENT_MODEL\t$EQUIPMENT_ID\t$EQUIPMENT_TYPE\t$EQUIPMENT_SERIAL\t$EQUIPMENT_PURCHASE\t$EQUIPMENT_WARRANTY"
+    done
 }
 
 if [ ! -e "$EQUIPMENT_FILE" ]
@@ -297,6 +344,16 @@ do
                         STATE="exit"
                         ;;
 
+                    "M")
+                        STATE="sort_model"
+                        ;;
+
+                    "T")
+                        STATE="sort_status"
+                        ;;
+                    "P")
+                        STATE="sort_type"
+                        ;;
                     *)
                         unset MENU_SELECTION
                         ;;
@@ -366,7 +423,7 @@ do
                 echo_line
                 echo
             else
-                echo "$EQUIPMENTS_MATCHED" | tail -n $(( EQUIPMENTS_COUNT - PAGE * ENTRY_PER_PAGE )) | head -n $(( ENTRY_PER_PAGE )) | while IFS= read EQUIPMENT_STR
+                echo "$EQUIPMENTS_MATCHED" | get_page | while IFS= read EQUIPMENT_STR
                 do
                     deserialize
                     echo "Equipment ID: $EQUIPMENT_ID"
@@ -379,10 +436,8 @@ do
                     echo_line
                     echo
                 done
-                echo "Showing $ENTRY_PER_PAGE equipments per page (Page $(( PAGE + 1 )) of $(( (EQUIPMENTS_COUNT - 1) / ENTRY_PER_PAGE + 1 )))"
-                echo
-                echo "Press - and = to decrease and increase equipments shown per page respectively."
-                echo "Press [ and ] to go to previous and next page respectively. "
+
+                echo_page_instructions
             fi
 
             if read_quit_continue "Search another equipment"
@@ -394,34 +449,7 @@ do
                     STATE="menu"
                 fi
             else
-                case $READ_CONTINUE in
-                    "-")
-                        if (( ENTRY_PER_PAGE > 1 ))
-                        then
-                            ENTRY_PER_PAGE=$(( ENTRY_PER_PAGE - 1 ))
-                            PAGE=0
-                        fi
-                        ;;
-
-                    "=")
-                        ENTRY_PER_PAGE=$(( ENTRY_PER_PAGE + 1 ))
-                        PAGE=0
-                        ;;
-
-                    "[")
-                        if (( PAGE > 0 ))
-                        then
-                            PAGE=$(( PAGE - 1 ))
-                        fi
-                        ;;
-
-                    "]")
-                        if (( (PAGE + 1) * ENTRY_PER_PAGE < EQUIPMENTS_COUNT ))
-                        then
-                            PAGE=$(( PAGE + 1 ))
-                        fi
-                        ;;
-                esac
+                read_page_operations
             fi
 
             ;;
@@ -439,6 +467,11 @@ do
             if [ -z "$EQUIPMENT_STR" ]
             then
                 echo "No equipment with ID $EQUIPMENT_ID exists"
+                echo
+                echo_line
+                echo
+
+                read_quit
             else
                 deserialize EQUIPMENT_ORIGINAL
 
@@ -448,18 +481,15 @@ do
                 if ! read_equipment_status "Status (Available /Unavailable) [$EQUIPMENT_ORIGINAL_STATUS]" "Status" "$EQUIPMENT_ORIGINAL_STATUS"; then continue; fi
                 if ! read_equipment_purchase "Purchase Date (MM-DD-YYYY) [$EQUIPMENT_ORIGINAL_PURCHASE]" "Purchase Date" "$EQUIPMENT_ORIGINAL_PURCHASE"; then continue; fi
                 if ! read_equipment_warranty "Warranty Date (MM-DD-YYYY) [$EQUIPMENT_ORIGINAL_WARRANTY]" "Warranty Date" "$EQUIPMENT_ORIGINAL_WARRANTY"; then continue; fi
+
+                echo
+                echo_line
+                echo
+
+                read_quit_continue "Are you sure you want to UPDATE the above Equipment Details"
             fi
 
-            echo
-            echo_line
-            echo
-
-            if [ "$EQUIPMENT_STR" ]
-            then
-                EQUIPMENT_STR="Are you sure you want to UPDATE the above Equipment Details"
-            fi
-
-            if read_quit_continue "$EQUIPMENT_STR"
+            if [ $? -eq 0 ]
             then
                 if [ "$READ_CONTINUE" = "y" ]
                 then
@@ -486,6 +516,11 @@ do
             if [ -z "$EQUIPMENT_STR" ]
             then
                 echo "No equipment with ID $EQUIPMENT_ID exists"
+                echo
+                echo_line
+                echo
+
+                read_quit
             else
                 deserialize EQUIPMENT
 
@@ -495,18 +530,14 @@ do
                 echo "Status: $EQUIPMENT_STATUS"
                 echo "Purchase Date: $EQUIPMENT_PURCHASE"
                 echo "Warranty Date: $EQUIPMENT_WARRANTY"
+                echo
+                echo_line
+                echo
+
+                read_quit_continue "Are you sure you want to DELETE the above Equipment Details"
             fi
 
-            echo
-            echo_line
-            echo
-
-            if [ "$EQUIPMENT_STR" ]
-            then
-                EQUIPMENT_STR="Are you sure you want to DELETE the above Equipment Details"
-            fi
-
-            if read_quit_continue "$EQUIPMENT_STR"
+            if [ $? -eq 0 ]
             then
                 if [ "$READ_CONTINUE" = "y" ]
                 then
@@ -522,6 +553,108 @@ do
         "exit")
             echo "Exit"
             break
+            ;;
+
+        "sort_model")
+            echo "Equipment Details Sorted by Model"
+            echo
+            echo_line
+            EQUIPMENTS_MATCHED=$(tail -n +2 "$EQUIPMENT_FILE" | grep -v '^$' | sort -t: -k3,3)
+            EQUIPMENTS_COUNT=$(echo "$EQUIPMENTS_MATCHED" | wc -l)
+
+            if [ -z "$EQUIPMENTS_MATCHED" ]; then
+                echo "No equipment records found!"
+                echo
+                echo_line
+                echo
+                read_quit
+            else
+                {
+                    echo -e "Model\tEquipment ID\tType\tSerial Number\tStatus\tWarranty Date"
+                    echo "$EQUIPMENTS_MATCHED" | get_page | echo_equipments_model
+                } | column -t -s $'\t'
+
+                echo
+                echo_page_instructions
+                read_quit_continue "Would you like to export the report as ASCII text file?"
+            fi
+
+            if [ $? -eq 0 ]
+            then
+                if [ "$READ_CONTINUE" = "y" ]
+                then
+                    REPORT_FILE="Sorted_Model_Report.txt"
+                    {
+                        echo "Equipment Details Sorted by Model"
+                        echo
+                        echo -e "Model\tEquipment ID\tType\tSerial Number\tStatus\tWarranty Date"
+                        echo_line
+                        echo "$EQUIPMENTS_MATCHED" | echo_equipments_model
+                    } | column -t -s $'\t' > "$REPORT_FILE"
+                fi
+
+#                 echo
+#                 echo "Report exported successfully to $REPORT_FILE"
+#                 echo
+                unset_equipment
+                STATE="menu"
+            else
+                read_page_operations
+            fi
+            ;;
+
+        "sort_status")
+            echo "Equipment Details Sorted by Status"
+            echo
+            echo_line
+            if ! read_equipment_status "Status (Available / Unavailable)" "Status";
+            then
+                PAGE=0
+                continue
+            fi
+
+            EQUIPMENTS_MATCHED=$(grep -i -F ":$EQUIPMENT_STATUS:" "$EQUIPMENT_FILE" | sort -t: -k5,5)
+            EQUIPMENTS_COUNT=$(echo "$EQUIPMENTS_MATCHED" | wc -l)
+
+            if [ -z "$EQUIPMENTS_MATCHED" ]; then
+                echo "No equipment found with the status $EQUIPMENT_STATUS"
+                echo
+                echo_line
+                echo
+                read_quit
+            else
+                {
+                    echo -e "Model\tEquipment ID\tType\tSerial Number\tPurchase Date\tWarranty Date"
+                    echo "$EQUIPMENTS_MATCHED" | get_page | echo_equipments_status
+                } | column -t -s $'\t'
+
+                echo
+                echo_page_instructions
+                read_quit_continue "Would you like to export the report as ASCII text file?"
+            fi
+
+            if [ $? -eq 0 ]
+            then
+                if [ "$READ_CONTINUE" = "y" ]
+                then
+                    REPORT_FILE="Sorted_Status_Report.txt"
+                    {
+                        echo "Equipment Details Sorted by Status"
+                        echo
+                        echo -e "Model\tEquipment ID\tType\tSerial Number\tPurchase Date\tWarranty Date"
+                        echo_line
+                        echo "$EQUIPMENTS_MATCHED" | echo_equipments_status
+                    } | column -t -s $'\t' > "$REPORT_FILE"
+                fi
+
+#                 echo
+#                 echo "Report exported successfully to $REPORT_FILE"
+#                 echo
+                unset_equipment
+                STATE="menu"
+            else
+                read_page_operations
+            fi
             ;;
 
         *)
