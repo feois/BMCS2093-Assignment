@@ -33,7 +33,7 @@ read_equipment_id() {
             else
                 echo "$3: $EQUIPMENT_ID"
 
-                return 0
+                return 1
             fi
         else
             echo "Invalid equipment ID (e.g. 1234)!"
@@ -43,7 +43,7 @@ read_equipment_id() {
     read -p "$2: " EQUIPMENT_ID
     EQUIPMENT_ID=${EQUIPMENT_ID:-"$DEFAULT"}
 
-    return 1
+    return 0
 }
 
 read_equipment_type() {
@@ -58,7 +58,7 @@ read_equipment_type() {
         then
             echo "$2: $EQUIPMENT_TYPE"
 
-            return 0
+            return 1
         else
             echo "Colon is not permitted!"
         fi
@@ -67,7 +67,7 @@ read_equipment_type() {
     read -p "$1: " EQUIPMENT_TYPE
     EQUIPMENT_TYPE=${EQUIPMENT_TYPE:-"$DEFAULT"}
 
-    return 1
+    return 0
 }
 
 read_equipment_model() {
@@ -82,7 +82,7 @@ read_equipment_model() {
         then
             echo "$2: $EQUIPMENT_MODEL"
 
-            return 0
+            return 1
         else
             echo "Colon is not permitted!"
         fi
@@ -91,7 +91,7 @@ read_equipment_model() {
     read -p "$1: " EQUIPMENT_MODEL
     EQUIPMENT_MODEL=${EQUIPMENT_MODEL:-"$DEFAULT"}
 
-    return 1
+    return 0
 }
 
 read_equipment_serial() {
@@ -106,7 +106,7 @@ read_equipment_serial() {
         then
             echo "$2: $EQUIPMENT_SERIAL"
 
-            return 0
+            return 1
         else
             echo "Invalid equipment serial number (e.g. SN123456789)!"
         fi
@@ -117,7 +117,7 @@ read_equipment_serial() {
     EQUIPMENT_SERIAL=$(echo "$EQUIPMENT_SERIAL" | tr '[:lower:]' '[:upper:]')
     EQUIPMENT_SERIAL=${EQUIPMENT_SERIAL:-"$DEFAULT"}
 
-    return 1
+    return 0
 }
 
 read_equipment_status() {
@@ -130,7 +130,7 @@ read_equipment_status() {
             echo "Invalid status!"
         else
             echo "$2: $EQUIPMENT_STATUS"
-            return 0
+            return 1
         fi
     fi
 
@@ -157,7 +157,7 @@ read_equipment_status() {
         esac
     fi
 
-    return 1
+    return 0
 }
 
 read_equipment_purchase() {
@@ -169,7 +169,7 @@ read_equipment_purchase() {
         then
             echo "$2: $EQUIPMENT_PURCHASE"
 
-            return 0
+            return 1
         else
             echo "Invalid date!"
         fi
@@ -178,7 +178,7 @@ read_equipment_purchase() {
     read -p "$1: " EQUIPMENT_PURCHASE
     EQUIPMENT_PURCHASE=${EQUIPMENT_PURCHASE:-"$DEFAULT"}
 
-    return 1
+    return 0
 }
 
 read_equipment_warranty() {
@@ -193,7 +193,7 @@ read_equipment_warranty() {
         then
             echo "$2: $EQUIPMENT_WARRANTY"
 
-            return 0
+            return 1
         else
             echo "Invalid date!"
         fi
@@ -202,7 +202,7 @@ read_equipment_warranty() {
     read -p "$1: " EQUIPMENT_WARRANTY
     EQUIPMENT_WARRANTY=${EQUIPMENT_WARRANTY:-"$DEFAULT"}
 
-    return 1
+    return 0
 }
 
 read_quit_continue() {
@@ -297,6 +297,14 @@ echo_equipments_status() {
     done
 }
 
+echo_equipments_type() {
+    while IFS= read -r EQUIPMENT_STR
+    do
+        deserialize
+        echo -e "$EQUIPMENT_MODEL\t$EQUIPMENT_ID\t$EQUIPMENT_STATUS\t$EQUIPMENT_SERIAL\t$EQUIPMENT_PURCHASE\t$EQUIPMENT_WARRANTY"
+    done
+}
+
 if [ ! -e "$EQUIPMENT_FILE" ]
 then
     echo "ID:Type:Model:Serial:Status:PurchaseDate:WarrantyDate" > "$EQUIPMENT_FILE"
@@ -351,9 +359,11 @@ do
                     "T")
                         STATE="sort_status"
                         ;;
+
                     "P")
                         STATE="sort_type"
                         ;;
+
                     *)
                         unset MENU_SELECTION
                         ;;
@@ -377,13 +387,13 @@ do
             echo "Add Equipment Details Form"
             echo_line
 
-            if ! read_equipment_id new "Equipment ID" "Equipment ID"; then continue; fi
-            if ! read_equipment_type "Type" "Type"; then continue; fi
-            if ! read_equipment_model "Model" "Model"; then continue; fi
-            if ! read_equipment_serial "Serial Number" "Serial Number"; then continue; fi
-            if ! read_equipment_status "Status (Available / Unavailable)" "Status"; then continue; fi
-            if ! read_equipment_purchase "Purchase Date (MM-DD-YYYY)" "Purchase Date"; then continue; fi
-            if ! read_equipment_warranty "Warranty Date (MM-DD-YYYY)" "Warranty Date"; then continue; fi
+            if read_equipment_id new "Equipment ID" "Equipment ID"; then continue; fi
+            if read_equipment_type "Type" "Type"; then continue; fi
+            if read_equipment_model "Model" "Model"; then continue; fi
+            if read_equipment_serial "Serial Number" "Serial Number"; then continue; fi
+            if read_equipment_status "Status (Available / Unavailable)" "Status"; then continue; fi
+            if read_equipment_purchase "Purchase Date (MM-DD-YYYY)" "Purchase Date"; then continue; fi
+            if read_equipment_warranty "Warranty Date (MM-DD-YYYY)" "Warranty Date"; then continue; fi
 
             echo
 
@@ -404,7 +414,7 @@ do
         "search")
             echo "Search Equipment"
             echo
-            if ! read_equipment_serial "Enter Serial Number" "Serial Number"
+            if read_equipment_serial "Enter Serial Number" "Serial Number"
             then
                 PAGE=0
                 continue
@@ -457,7 +467,7 @@ do
         "update")
             echo "Update Equipment Details"
             echo
-            if ! read_equipment_id search "Enter Equipment ID" "Equipment ID"; then continue; fi
+            if read_equipment_id search "Enter Equipment ID" "Equipment ID"; then continue; fi
             echo
             echo_line
             echo
@@ -475,12 +485,12 @@ do
             else
                 deserialize EQUIPMENT_ORIGINAL
 
-                if ! read_equipment_serial "Serial Number [$EQUIPMENT_ORIGINAL_SERIAL]" "Serial Number" "$EQUIPMENT_ORIGINAL_SERIAL"; then continue; fi
-                if ! read_equipment_type "Type [$EQUIPMENT_ORIGINAL_TYPE]" "Type" "$EQUIPMENT_ORIGINAL_TYPE"; then continue; fi
-                if ! read_equipment_model "Model [$EQUIPMENT_ORIGINAL_MODEL]" "Model" "$EQUIPMENT_ORIGINAL_MODEL"; then continue; fi
-                if ! read_equipment_status "Status (Available /Unavailable) [$EQUIPMENT_ORIGINAL_STATUS]" "Status" "$EQUIPMENT_ORIGINAL_STATUS"; then continue; fi
-                if ! read_equipment_purchase "Purchase Date (MM-DD-YYYY) [$EQUIPMENT_ORIGINAL_PURCHASE]" "Purchase Date" "$EQUIPMENT_ORIGINAL_PURCHASE"; then continue; fi
-                if ! read_equipment_warranty "Warranty Date (MM-DD-YYYY) [$EQUIPMENT_ORIGINAL_WARRANTY]" "Warranty Date" "$EQUIPMENT_ORIGINAL_WARRANTY"; then continue; fi
+                if read_equipment_serial "Serial Number [$EQUIPMENT_ORIGINAL_SERIAL]" "Serial Number" "$EQUIPMENT_ORIGINAL_SERIAL"; then continue; fi
+                if read_equipment_type "Type [$EQUIPMENT_ORIGINAL_TYPE]" "Type" "$EQUIPMENT_ORIGINAL_TYPE"; then continue; fi
+                if read_equipment_model "Model [$EQUIPMENT_ORIGINAL_MODEL]" "Model" "$EQUIPMENT_ORIGINAL_MODEL"; then continue; fi
+                if read_equipment_status "Status (Available /Unavailable) [$EQUIPMENT_ORIGINAL_STATUS]" "Status" "$EQUIPMENT_ORIGINAL_STATUS"; then continue; fi
+                if read_equipment_purchase "Purchase Date (MM-DD-YYYY) [$EQUIPMENT_ORIGINAL_PURCHASE]" "Purchase Date" "$EQUIPMENT_ORIGINAL_PURCHASE"; then continue; fi
+                if read_equipment_warranty "Warranty Date (MM-DD-YYYY) [$EQUIPMENT_ORIGINAL_WARRANTY]" "Warranty Date" "$EQUIPMENT_ORIGINAL_WARRANTY"; then continue; fi
 
                 echo
                 echo_line
@@ -506,7 +516,7 @@ do
         "delete")
             echo "Delete Equipment Details"
             echo
-            if ! read_equipment_id search "Enter Equipment ID" "Equipment ID"; then continue; fi
+            if read_equipment_id search "Enter Equipment ID" "Equipment ID"; then continue; fi
             echo
             echo_line
             echo
@@ -607,7 +617,7 @@ do
             echo "Equipment Details Sorted by Status"
             echo
             echo_line
-            if ! read_equipment_status "Status (Available / Unavailable)" "Status";
+            if read_equipment_status "Status (Available / Unavailable)" "Status";
             then
                 PAGE=0
                 continue
@@ -650,6 +660,56 @@ do
 #                 echo
 #                 echo "Report exported successfully to $REPORT_FILE"
 #                 echo
+                unset_equipment
+                STATE="menu"
+            else
+                read_page_operations
+            fi
+            ;;
+
+        "sort_type")
+            echo "Equipment Details Sorted by Equipment Type"
+            echo
+            echo_line
+            if read_equipment_type "Enter Equipment Type" "Type"; then
+                PAGE=0
+                continue
+            fi
+
+            EQUIPMENTS_MATCHED=$(grep -i -F ":$EQUIPMENT_TYPE:" "$EQUIPMENT_FILE" | sort -t: -k2,2)
+            EQUIPMENTS_COUNT=$(echo "$EQUIPMENTS_MATCHED" | wc -l)
+
+            if [ -z "$EQUIPMENTS_MATCHED" ]; then
+                echo "No equipment found with the type $EQUIPMENT_TYPE"
+                echo
+                echo_line
+                echo
+                read_quit
+            else
+                {
+                    echo -e "Model\tEquipment ID\tStatus\tSerial Number\tPurchase Date\tWarranty Date"
+                    echo "$EQUIPMENTS_MATCHED" | get_page | echo_equipments_type
+                } | column -t -s $'\t'
+
+                echo
+                echo_page_instructions
+                read_quit_continue "Would you like to export the report as ASCII text file?"
+            fi
+
+            if [ $? -eq 0 ]
+            then
+                if [ "$READ_CONTINUE" = "y" ]
+                then
+                    REPORT_FILE="Sorted_Type_Report.txt"
+                    {
+                        echo "Equipment Details Sorted by Equipment Type"
+                        echo
+                        echo -e "Model\tEquipment ID\tStatus\tSerial Number\tPurchase Date\tWarranty Date"
+                        echo_line
+                        echo "$EQUIPMENTS_MATCHED" | echo_equipments_type
+                    } | column -t -s $'\t' > "$REPORT_FILE"
+                fi
+
                 unset_equipment
                 STATE="menu"
             else
