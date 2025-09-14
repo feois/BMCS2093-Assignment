@@ -227,9 +227,6 @@ read_equipment_warranty() {
 }
 
 read_quit_continue() {
-    echo "Press (q) to return to Equipment Maintenance Menu."
-    echo
-
     read -n 1 -p "$1? (y)es or (q)uit: " READ_CONTINUE
 
     READ_CONTINUE=$(echo "$READ_CONTINUE" | tr '[:upper:]' '[:lower:]')
@@ -238,10 +235,7 @@ read_quit_continue() {
 }
 
 read_quit() {
-    echo "Press (q) to return to Equipment Maintenance Menu."
-    echo
-
-    read -n 1 READ_CONTINUE
+    read -n 1 -p "Press (q) to return to Equipment Maintenance Menu. " READ_CONTINUE
 
     READ_CONTINUE=$(echo "$READ_CONTINUE" | tr '[:upper:]' '[:lower:]')
 
