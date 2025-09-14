@@ -368,7 +368,7 @@ do
                         ;;
 
                     "M")
-                        STATE="sort_model"
+                        PAGE=0; STATE="sort_model"
                         ;;
 
                     "T")
@@ -580,7 +580,6 @@ do
             echo
             echo_line
 
-            PAGE=0
             EQUIPMENTS_MATCHED=$(tail -n +2 "$EQUIPMENT_FILE" | grep -v '^$' | sort -t: -k3,3)
             EQUIPMENTS_COUNT=$(echo "$EQUIPMENTS_MATCHED" | wc -l)
 
@@ -705,7 +704,7 @@ do
 
                 echo
                 echo_page_instructions
-                read_quit_continue "Would you like to export the report as ASCII text file?"
+                read_quit_continue "Would you like to export the report as ASCII text file"
             fi
 
             if [ $? -eq 0 ]
